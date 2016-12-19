@@ -1,14 +1,23 @@
 package com.litaook.lottery;
 
+import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
@@ -16,13 +25,16 @@ import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JLayeredPane;
 import javax.swing.JPanel;
 import javax.swing.UIManager;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.litaook.lottery.util.CopyFile;
+import com.litaook.lottery.util.ImagePanel;
 
 /**
  * 抽奖主程序 annual_party_new是备用照片目录，存放所有待抽奖人照片，建议使用人名作为文件名；<br/>
@@ -43,7 +55,9 @@ public class Lucky implements ActionListener {
 	// 图片名称列表
 	List<String> imageNames = new ArrayList<String>();
 	// 主要几个面板
-	JPanel mainPanel, selectPanel, displayPanel, resultPanel;
+	JLayeredPane mainPanel;
+	JPanel selectPanel, resultPanel;
+	ImagePanel displayPanel;
 	// 抽奖控制按键
 	JButton phaseChoice = null;
 	// 显示结果标签
@@ -58,7 +72,7 @@ public class Lucky implements ActionListener {
 	// 图片切换间隔时间 ms
 	final static int DURATION = 50;
 	// 图片显示区域左右边距
-	final static int DISPLAY_MARGIN = 20;
+	final static int DISPLAY_MARGIN = 0;
 	// 通用边距
 	final static int MARGIN = 10;
 	// 按键宽度
@@ -74,7 +88,7 @@ public class Lucky implements ActionListener {
 	// 图片目录
 	final static String IMAGE_DIR = "images/";
 	final static String WINNER_DIR = "winners/";
-	final static String WELCOME_IMAGE = "welcome/start.jpg";
+	final static String WELCOME_IMAGE = "welcome/DHL圣诞.jpg";
 
 	// Constructor
 	public Lucky() throws IOException {
@@ -86,17 +100,23 @@ public class Lucky implements ActionListener {
 		setPanelsSize();
 
 		// 自定义布局面板
-		mainPanel = new JPanel();
+		mainPanel = new JLayeredPane();
 		mainPanel.setLayout(null);
 
 		// 添加到主面板中
-		mainPanel.add(selectPanel);
-		mainPanel.add(displayPanel);
-		mainPanel.add(resultPanel);
+//		mainPanel.add(selectPanel);
+		mainPanel.add(displayPanel, 2);
+		mainPanel.add(resultPanel, 1);
+		
+		displayPanel.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				actionPerformed(null);
+			}
+		});
 
 		// 添加插件，读取所有图片入数组
 		addWidgets();
-
 		log.debug("end");
 	}
 
@@ -130,21 +150,24 @@ public class Lucky implements ActionListener {
 		selectPanel.setBounds(x, y, w, h);
 
 		// 图片显示区域面板
-		displayPanel = new JPanel();
+//		displayPanel = new JPanel();
 		// 图片显示区域大小设置
 		x = DISPLAY_MARGIN;
 		y = MARGIN;
 		w = screenWidth - DISPLAY_MARGIN * 2;
-		h = screenHeight - DOWN_HEIGHT - MARGIN * 3;
+		h = screenHeight;
+		displayPanel = new ImagePanel(WELCOME_IMAGE, w, h);
 		displayPanel.setBounds(x, y, w, h);
 
 		// 获奖显示区域面板
 		resultPanel = new JPanel();
 		// 获奖显示区域大小
-		x = screenWidth / 2 + MARGIN;
-		y = screenHeight - MARGIN * 2 - DOWN_HEIGHT;
+		x = screenWidth / 3 /*+ MARGIN*/;
+		y = screenHeight - DOWN_HEIGHT;
 		w = RESULT_WIDTH;
 		h = DOWN_HEIGHT;
+//		Color color = new Color(1,1,0,0.0f);
+//		resultPanel.setBackground(color);
 		resultPanel.setBounds(x, y, w, h);
 		log.debug("end");
 	}
@@ -257,8 +280,8 @@ public class Lucky implements ActionListener {
 		phaseIconLabel.setVerticalTextPosition(JLabel.CENTER);
 		phaseIconLabel.setHorizontalTextPosition(JLabel.CENTER);
 		phaseIconLabel.setBorder(BorderFactory.createCompoundBorder(
-				BorderFactory.createLoweredBevelBorder(),
-				BorderFactory.createEmptyBorder(1, 1, 1, 1)));
+				BorderFactory.createEmptyBorder(),
+				BorderFactory.createEmptyBorder(screenHeight / 5, 1, 1, 1)));
 
 		phaseResult = new JLabel();
 		phaseBlank1 = new JLabel();
@@ -266,6 +289,8 @@ public class Lucky implements ActionListener {
 
 		// 创建控制按键
 		phaseChoice = new JButton("开始/停止");
+		
+		phaseResult.setFont(new Font("宋体", Font.PLAIN, 30));
 
 		// 显示第一张欢迎图片
 		// 读入图
@@ -284,25 +309,24 @@ public class Lucky implements ActionListener {
 		phaseIconLabel.setText("");
 
 		// 各区域设置边框
-		selectPanel.setBorder(BorderFactory.createCompoundBorder(
-				BorderFactory.createTitledBorder("操作区"),
-				BorderFactory.createEmptyBorder(5, 5, 5, 5)));
-
-		resultPanel.setBorder(BorderFactory.createCompoundBorder(
-				BorderFactory.createTitledBorder("结果区"),
-				BorderFactory.createEmptyBorder(5, 5, 5, 5)));
+//		selectPanel.setBorder(BorderFactory.createCompoundBorder(
+//				BorderFactory.createTitledBorder("操作区"),
+//				BorderFactory.createEmptyBorder(5, 5, 5, 5)));
+//
+//		resultPanel.setBorder(BorderFactory.createCompoundBorder(
+//				BorderFactory.createTitledBorder("结果区"),
+//				BorderFactory.createEmptyBorder(5, 5, 5, 5)));
 
 		// 图片区域设置边框
-		displayPanel.setBorder(BorderFactory.createCompoundBorder(
-				BorderFactory.createTitledBorder("照片列表"),
-				BorderFactory.createEmptyBorder(5, 5, 5, 5)));
+//		displayPanel.setBorder(BorderFactory.createCompoundBorder(
+//				BorderFactory.createTitledBorder("照片列表"),
+//				BorderFactory.createEmptyBorder(5, 5, 5, 5)));
 
 		// 在显示面板上添加各
 		selectPanel.add(phaseChoice);
 		displayPanel.add(phaseIconLabel);
-		resultPanel.add(phaseBlank1);
+//		resultPanel.add(phaseBlank1);
 		resultPanel.add(phaseResult);
-		resultPanel.add(phaseBlank2);
 		log.debug("各显示Panel设置完毕");
 
 		// 给控制按键设置监听器
@@ -333,7 +357,15 @@ public class Lucky implements ActionListener {
 			run = false;
 			phaseBlank1.setText("恭喜");
 			phaseBlank2.setText("中奖啦！");
+			
+			String imageFileName = new StringBuffer(phaseResult.getText()).append(".jpg")
+					.toString();
+			String srcFile = new StringBuffer(rootDir).append(IMAGE_DIR)
+					.append(imageFileName).toString();
+			phaseIconLabel.setIcon(new ImageIcon(srcFile));
 			// 删除获奖照片
+			imageIcons.clear();
+			imageNames.clear();
 			try {
 				moveLuckyImage(phaseResult.getText());
 			} catch (IOException ioe) {
@@ -369,6 +401,7 @@ public class Lucky implements ActionListener {
 							String imageName = imageNames.get(index);
 							phaseResult.setText(imageName.substring(0,
 									imageName.lastIndexOf(".")));
+							
 							phaseBlank2.setText("");
 						} catch (Exception e) {
 							e.printStackTrace();
@@ -448,13 +481,45 @@ public class Lucky implements ActionListener {
 
 			// 关闭窗口退出
 			frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+			
+			frame.addWindowListener(new WindowAdapter() {
+				@Override
+				public void windowClosing(WindowEvent e) {
+					File winnerDir = new File(WINNER_DIR);
+					File imageDir = new File(IMAGE_DIR);
+					
+					File[] winners = winnerDir.listFiles();
+					List<String> winnersNameList = new ArrayList<>();
+					for(File winner : winners) {
+						winnersNameList.add(winner.getName());
+					}
+					final Set<String> winnersNameSet = new HashSet<>(winnersNameList);
+					File[] duplicateFiles = imageDir.listFiles(new FilenameFilter() {
+
+						@Override
+						public boolean accept(File dir, String name) {
+							return winnersNameSet.contains(name);
+						}
+						
+					});
+					for(File duplicateFile : duplicateFiles) {
+						duplicateFile.delete();
+					}
+					try {
+						for(File winner : winners) {
+							FileUtils.copyFileToDirectory(winner, imageDir);
+							winner.delete();
+						}
+					} catch(IOException excep) {}
+				}
+			});
 
 			// 开始显示
 			log.debug("Frame.pack() - start");
 			frame.pack();
 			log.debug("Frame.pack() - end");
 			frame.setVisible(true);
-
+			luck.phaseIconLabel.setIcon(new ImageIcon());
 		} catch (Exception e) {
 			log.fatal(e);
 		} finally {
